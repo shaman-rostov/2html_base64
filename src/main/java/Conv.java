@@ -1,5 +1,8 @@
 import java.io.*;
 
+//import com.sun.java.util.jar.pack.Instruction;
+import com.sun.org.apache.bcel.internal.generic.SWITCH;
+import com.sun.tools.javah.Util;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import sun.misc.BASE64Encoder;
@@ -20,9 +23,12 @@ import java.util.Objects;
 
 public class Conv {
     public static void main(String[] args) throws IOException{
-        org.jsoup.nodes.Document doc = null;
-        String title = null;
-        Elements timg = null;
+        String typeWork = null;
+        String fullPath = null;
+        Path path;
+        //Document doc = null;
+        String title;
+        //Elements timg = null;
         String allHTML;
        // URL url = new URL("http://solabos.ru/faq/img/3_button.png");
         //BufferedImage img = ImageIO.read(new File("/Users/shaman/Downloads/t_logo.png"));
@@ -31,28 +37,58 @@ public class Conv {
         //String imgstr;
         //imgstr = encodeToString(img, "png");
        // System.out.println(base64File("http://solabos.ru/faq/img/3_button.png")); //Print base64 image
-        try {
-            doc = Jsoup.connect("http://solabos.ru/faq/index.html").get();
+        if (args.length==0)
+        {
+            System.out.println("key: F for file, W for website; path for file or for website; savefilename filename with full path for save");
+            System.exit(-2);
+        }
+        for (int i=0;i<args.length;i++){
+            System.out.println(args[i]);
+        }
+        if (args[0] == "f") {typeWork="FILE";}
+        if (args[0] == "F") {typeWork="FILE";}
+        if ((args[0] == "w") || (args[0] == "W")) {typeWork="WEB";}
+        System.out.println("Work type: "+typeWork);
+      //  path = Paths.get (args[1]);
+   //     fullPath = path.toAbsolutePath().toString();
+                //getFull.toString();
 
-            title = doc.title();
+        allHTML= ConnectToWeb(args[1]);
+        if (saveToFile(args[2], allHTML)==Boolean.TRUE) {System.out.println("File has been written");}
+    }
+
+    private static String ConnectToWeb (String url) throws MalformedURLException {
+        Document doc = null;
+        Elements timg = null;
+        String title = null;
+        try {
+            doc = Jsoup.connect(url).get();
             timg = doc.getElementsByTag("img");
         } catch (IOException e){
             e.printStackTrace();
         }
-        //System.out.println("title: "+title);
-        //System.out.println(timg);
-        timg = addAllTag (timg);
-        allHTML = doc.html().toString();
-        try (FileOutputStream fos=new FileOutputStream("/Users/shaman/Downloads/allHTML.html")) {
-            byte[] buffer = allHTML.getBytes();
+        if (doc != null) {
+            title = doc.title();
+        }
+        System.out.println(title);
+        addAllTag(timg);
+    return String.valueOf(doc);
+    }
+
+    private static Boolean saveToFile (String fullName, String textHTML){
+        try (FileOutputStream fos=new FileOutputStream(fullName)) {
+            byte[] buffer = textHTML.getBytes();
             fos.write(buffer, 0, buffer.length);
         }
         catch (IOException e){
             System.out.println(e.getMessage());
+            return Boolean.FALSE;
         }
-        System.out.println("file has been written");
+
+        return Boolean.TRUE;
     }
-    public static String encodeToString(BufferedImage image, String type) {
+
+    private static String encodeToString(BufferedImage image, String type) {
         String imageString = null;
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
 
@@ -69,24 +105,20 @@ public class Conv {
         }
         return imageString;
     }
-    public static Elements addAllTag (Elements elm) throws MalformedURLException {
-        Element txt; String txt2;
+    private static void addAllTag (Elements elm) throws MalformedURLException {
+        Element txt;
+        String txt2;
         for (int i=0; i < elm.size();i++) {
          txt = elm.get(i); //content of tag img
          txt2 = txt.attr("src"); // content of attr "src"
          Path path = Paths.get(txt2); //get path
-           // System.out.println(txt2);
-
-            txt = txt.attr("alt", path.getFileName().toString()); // add attr "alt" with image file name
-            txt = txt.attr ("src",base64File("http://solabos.ru/faq/"+txt2));
-                  //getElementsByAttribute("src");
-            //System.out.println(txt);
-            //System.out.println(i+" : "+path.getFileName());
+         txt = txt.attr("alt", path.getFileName().toString()); // add attr "alt" with image file name
+         txt = txt.attr ("src",base64File(txt2)); //"http://solabos.ru/faq/"+
         }
-        return elm;
+
     }
     @org.jetbrains.annotations.NotNull
-    public static String base64File (String urlPic) throws MalformedURLException {
+    private static String base64File (String urlPic) throws MalformedURLException {
         URL url2 = new URL(urlPic);
         String imgstr = null;
         Path path = Paths.get(urlPic); //get path to pic
@@ -96,7 +128,7 @@ public class Conv {
             BufferedImage img = ImageIO.read(url2);
             if (Objects.equals(ext, "svg")) {
                 System.out.println("It's SVG file. Sorry");
-                return "SVG";
+                return urlPic; //return for SVG file
             } else {
                 imgstr = encodeToString(img, ext);
             }
